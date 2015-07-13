@@ -1,0 +1,10 @@
+# River:           river_1
+# Reach:           reach_1
+# Station:         1
+# 3D-data?:        1
+# Number of zones: 1
+xcoord	ycoord	offset	elevation	roughness	zone_index
+0	0	0	3	30	0
+0	0	0	0	30	0
+0	10	10	0	30	0
+0	10	10	3	30	0

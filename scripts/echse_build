@@ -1,0 +1,106 @@
+#!/bin/bash -i
+
+# This is a quasi-makefile for building an ECHSE model on a system using the
+# BASH shell. In contrast to a makefile, the up-to-dateness of files is not
+# checked, i.e. compilation is unconditional.
+
+echo "-------------------------------------------------------"
+echo "This is the build script for ECHSE-based model engines."
+
+if [ -z $1 ]; then
+  echo "Error: Missing argument(s)."
+  echo "  Usage on Linux:    echse_build  engine_name  [y|n]"
+  echo "  Usage on Windows:  echse_build_win.bat  engine_name  [y|n]"
+  echo ""
+  echo "  1st argument: Name of the model engine to be build."
+  echo "  2nd argument: Use 'y' to re-compile the C++ library. Use 'n' to use"
+  echo "                an existing version of the library. Default is 'y'."
+  read -p "Press [ENTER]"
+  exit 1
+fi
+
+engine=$1
+makelib=$2
+if [ "x$makelib" != "xn" ]; then
+  makelib=y
+fi
+
+# Check ECHSE directories defined by environment variables
+if [ -z "$ECHSE_GENERIC" ] || [ ! -d "$ECHSE_GENERIC" ]
+then
+  echo "Error: Environment variable 'ECHSE_GENERIC' is undefined or does not point to an existing directory."
+  exit 1
+fi
+if [ -z "$ECHSE_ENGINES" ] || [ ! -d "$ECHSE_ENGINES" ]
+then
+  echo "Error: Environment variable 'ECHSE_ENGINES' is undefined or does not point to an existing directory."
+  exit 1
+fi
+
+# Check that a directory with generated code exists for an engine with that name
+genDir="$ECHSE_ENGINES/generated/$engine"
+if [ ! -d "$genDir" ]
+then
+  echo "Error: Generated code for model engine '$engine' not found in expected directory ($genDir)."
+  exit 1
+fi
+
+# Assemble folder names from environment variables
+bindir="$ECHSE_ENGINES/bin"                           # Folder for model engines
+cpplib="$ECHSE_GENERIC/cpplib"                        # Directory containing the Library with utility code
+coreDir="$ECHSE_GENERIC/core"                         # Directory with source code of the generic model core
+
+genDir="$ECHSE_ENGINES/generated/$engine"             # Directory with header files created by the code generator
+userDirCls="$ECHSE_ENGINES/classes/implementation"    # Directory with manually written class code
+userDirPrc="$ECHSE_ENGINES/processes"                 # Directory with manually written process code
+
+# Compile the static library, if requested
+if [ $makelib == "y" ]
+then
+  cd $cpplib
+  if [ $? -ne 0 ]
+  then
+    echo "Error: Cannot change to C++ library folder $cpplib."
+    exit 1
+  fi
+  ./make_library
+  if [ $? -ne 0 ]
+  then
+    echo "Error: Failed to create static C++ library."
+    exit 1
+  fi
+else
+  echo "Note: Re-compilation of the C++ library is skipped for now."
+  echo "      This requires an existing library which is UP-TO-DATE."
+fi
+
+# Change to central bin directory
+cd $bindir
+if [ $? -ne 0 ]
+then
+  echo "Error: Cannot change to model engine binary directory ($bindir)."
+  exit 1
+fi
+
+# Compiler
+compi="g++"
+
+# Compiler flags
+flags="-ansi -iquote$cpplib -iquote$coreDir -iquote$genDir -iquote$userDirCls -iquote$userDirPrc -L$cpplib -Wall -Wextra -lstdc++ -std=c++0x -pedantic -ftrapping-math -ffast-math -fbounds-check -O3 -fopenmp"
+
+# List of source files of the generic model core
+pattern="$coreDir/*.cpp"
+coreSources=$(ls $pattern)
+
+# Compile command
+echo "Compiling $engine. This may take some time..."
+$compi $flags -o $engine $coreSources -lcpplib -lm
+if [ $? -ne 0 ]
+then
+  echo "Error: Compilation/build failed. See error messages above."
+  exit 1  
+else
+  echo "Completed successfully."
+  exit 0
+fi
+

@@ -1,0 +1,51 @@
+#!/bin/bash -i
+
+echo "--------------------------------------------------------"
+echo "This is the calling script for the ECHSE code generator."
+
+if [ -z $1 ]; then
+  echo "Error: Missing argument(s)."
+  echo "  Usage on Linux:    echse_generate  engine_name"
+  echo "  Usage on Windows:  echse_generate_win.bat  engine_name"
+  echo ""
+  echo "  1st argument: Name of the model engine."
+  read -p "Press [ENTER]"
+  exit 1
+fi
+
+engine=$1
+
+# Check ECHSE directories defined by environment variables
+if [ -z "$ECHSE_GENERIC" ] || [ ! -d "$ECHSE_GENERIC" ] ; then
+  echo "Error: Environment variable 'ECHSE_GENERIC' is undefined or does not point to an existing directory."
+  exit 1
+fi
+if [ -z "$ECHSE_ENGINES" ] || [ ! -d "$ECHSE_ENGINES" ] ; then
+  echo "Error: Environment variable 'ECHSE_ENGINES' is undefined or does not point to an existing directory."
+  exit 1
+fi
+
+# Assemble name of R script and check existence
+rscript="$ECHSE_GENERIC/scripts/r/codegen.r"
+if [ ! -f "$rscript" ]; then
+  echo "Error: Code generator script '$rscript' not found."
+  exit 1
+fi
+
+# Make sure that R is available
+if [ -z "$(command -v R)" ]; then
+  echo "Error: Program 'R' not installed or not accessible from command line."
+  exit 1
+fi
+
+# Call the code generator
+echo "Calling R to generate code for engine '$engine'"
+R --silent --slave --vanilla --file=$rscript --args $engine
+if [ $? -ne 0 ]; then
+  echo "Error: Code generation failed. See error messages above."
+  exit 1
+else
+  echo "Completed successfully.";
+  exit 0
+fi
+

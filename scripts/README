@@ -1,0 +1,13 @@
+In this directory, you find the files
+
+  (1) to generate source code for an ECHSE-based model engine, and
+
+  (2) for building the corresponding executable.
+
+
+The files without extentsion are bash shell scripts for use on LINUX. Files with the '.bat' extension are the corresponding equivalents for use on WINDOWS. You must run those files from the command line with proper arguments. Remember that you can only compile existing code. i.e. you need to run the 'generate' script BEFORE executing the 'build' script.
+
+If the code generation is successful, you find the generated code in the folder "<ECHSE_ENGINES>/generated/<ENGINE>" where <ECHSE_ENGINES> is the directory defined by the environment variable 'ECHSE_ENGINES' and <ENGINE> is the name of the particular model engine.
+
+If the build process is successful, you find the executable in the folder "<ECHSE_ENGINES>/bin".
+

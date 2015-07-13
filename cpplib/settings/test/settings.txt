@@ -1,0 +1,7 @@
+
+# Example settings file
+
+dresden=01309
+berlin=12618
+qlb=03946
+

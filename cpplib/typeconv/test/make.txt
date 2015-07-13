@@ -1,0 +1,1 @@
+g++ -lstdc++ -o test conv_test.c++ /home/dkneis/cpp/dklib/except/except.cpp /home/dkneis/cpp/dklib/typeconv/typeconv.cpp

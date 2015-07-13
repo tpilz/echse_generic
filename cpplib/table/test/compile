@@ -1,0 +1,35 @@
+#!/bin/bash -i
+
+bindir=$(pwd)
+
+cpplib="$ECHSE_GENERIC/cpplib/current"
+
+compi="g++"
+
+flags="-ansi -iquote$cpplib -L$cpplib -Wall -Wextra -lm -lstdc++ -std=c++0x -pedantic -ftrapping-math -fbounds-check -O3 -fopenmp"
+
+cd $cpplib
+if [ $? -ne 0 ]
+then
+  echo "Error: Cannot change to C++ library folder $cpplib."
+  exit 1
+fi
+./make_library
+if [ $? -ne 0 ]
+then
+  echo "Error: Failed to create static C++ library."
+  exit 1
+fi
+
+cd $bindir
+
+$compi $flags -o test2 test2.c++ -lcpplib
+if [ $? -ne 0 ]
+then
+  echo "Error: Compilation/build failed. See error messages above."
+  exit 1  
+else
+  echo "Completed successfully."
+  exit 0
+fi
+

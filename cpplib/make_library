@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Note: You probably don't want to run this shell script directly!
+#       It will be executed automatically if and when needed.
+
+compi=g++
+flags="-Wall -Wextra -O3 -ffast-math -c"
+libName=libcpplib.a
+
+objFiles=""
+baseDir=$(pwd)
+dirs=$(ls -d */)
+
+echo "Creating static library $libName..."
+for i in $dirs; do
+  cd $i
+  if [ -e ${i%%/}.cpp ]; then
+    echo "Compiling sources in ${i%%/}"
+    if [ -e ${i%%/}.o ]; then
+      rm ${i%%/}.o
+    fi
+    $compi $flags *.cpp -o ${i%%/}.o -lm
+    if [ $? -ne 0 ]
+    then
+      echo "Compilation failed."
+      exit 1
+    fi
+    objFiles="$objFiles $i${i%%/}.o"
+  fi
+  cd $baseDir
+done
+
+echo "Creating archive $libName."
+ar rs $libName $objFiles
+if [ $? -ne 0 ]
+then
+  echo "Failed to create archive."
+  exit 1
+fi
+
+exit 0
+
