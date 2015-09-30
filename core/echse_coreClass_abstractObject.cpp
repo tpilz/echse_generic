@@ -1188,7 +1188,7 @@ void abstractObject::output_debug(const bool firstCall, const string &outdir,
         for (vector<string>::size_type i=0; i<names.size(); i++) {
           *osPtrDbg << timestamp << chars_colsep << "inputSim" << chars_colsep <<
             names[i] << chars_colsep << "0" << chars_colsep << 
-            scientific << setprecision(3) << inputsSim[i] << endl;
+            scientific << setprecision(3) << *inputsSim[i] << endl;
         }
       }
     } catch (except) {
