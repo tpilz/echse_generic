@@ -338,6 +338,25 @@ class abstractObject {
     virtual void simulate(const unsigned int delta_t)= 0;
     virtual void derivsScal(const double t, const vector<double> &u,
       vector<double> &dudt, const unsigned int delta_t)= 0;
+
+    // Checks whether a parameter is within the expected range
+    // na_val - na_tol   to   na_val + na_tol
+    void checkParamNum (const T_index_paramNum &index,
+      const double na_val, const double na_tol) {
+      if (index.index < paramsNum.size()) {
+        if ( abs(paramNum(index) - na_val) < na_tol ) {
+          stringstream errmsg;
+          const vector<string> names= objectGroupPointer->get_namesParamsNum();
+          errmsg << "Value " << paramNum(index) << " for parameter " <<
+            names[index.index] << " is outside range [" << 
+            na_val - na_tol << ", " << na_val + na_tol << "].";
+          except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+          throw(e);
+        }
+      }
+    }
+
+
 };
 
 #endif
