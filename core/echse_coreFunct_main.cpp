@@ -188,7 +188,7 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Initializing object outputs");
     try {
       table tab;
-	    tab.read(control["table_selectedOutput"], true, input_colsep, input_commentchar);
+            tab.read(control["table_selectedOutput"], true, input_colsep, input_commentchar);
       for (unsigned int i=0; i<objects.size(); i++) {
         objects[i]->init_outputs(tab);
       }
@@ -200,7 +200,7 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Switching on debug mode for selected objects");
     try {
       table tab;
-	    tab.read(control["table_debugOutput"], true, input_colsep, input_commentchar);
+            tab.read(control["table_debugOutput"], true, input_colsep, input_commentchar);
       for (unsigned int i=0; i<objects.size(); i++) {
         objects[i]->set_debugMode(tab);
       }
@@ -213,7 +213,7 @@ int main (const int argc, const char* argv[]) {
     try {
       table tab;
       // We expect a one-column table with times in ISO format --> don't use space as colsep
-	    tab.read(control["table_stateOutput"], true, "\t", input_commentchar);
+            tab.read(control["table_stateOutput"], true, "\t", input_commentchar);
       unsigned int colindex;
       try {
         colindex= tab.colindex(globalConst::colNames.time);
@@ -284,16 +284,16 @@ int main (const int argc, const char* argv[]) {
     try {
       string key;
       for (unsigned int k=0; k<objectGroups.size(); k++) {
-	try {
-	  key= objectGroups[k]->get_idObjectGroup() + "_funParamsIndividual";
-	  objectGroups[k]->set_tableParamsFun(control[key], input_colsep, input_commentchar);
-	} catch (except) {
-	  stringstream errmsg;
-	  errmsg << "Failed to read table of individual parameter functions for objects of object group '" <<
-	    objectGroups[k]->get_idObjectGroup() << "'.";
-	  except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	  throw(e);
-	}
+        try {
+          key= objectGroups[k]->get_idObjectGroup() + "_funParamsIndividual";
+          objectGroups[k]->set_tableParamsFun(control[key], input_colsep, input_commentchar);
+        } catch (except) {
+          stringstream errmsg;
+          errmsg << "Failed to read table of individual parameter functions for objects of object group '" <<
+            objectGroups[k]->get_idObjectGroup() << "'.";
+          except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+          throw(e);
+        }
       }
     } catch (except) {
       except e(__PRETTY_FUNCTION__,"Failed to read table(s) of individual parameter functions.",__FILE__,__LINE__);
@@ -302,7 +302,7 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Initializing individual parameter functions");
     try {
       for (unsigned int i=0; i<objects.size(); i++) {
-	objects[i]->init_paramsFun(input_colsep, input_commentchar);
+        objects[i]->init_paramsFun(input_colsep, input_commentchar);
       }
     } catch (except) {
       except e(__PRETTY_FUNCTION__, "Failed to initialize individual parameter functions.", __FILE__, __LINE__);
@@ -318,16 +318,16 @@ int main (const int argc, const char* argv[]) {
     try {
       string key;
       for (unsigned int k=0; k<objectGroups.size(); k++) {
-	try {
-	  key= objectGroups[k]->get_idObjectGroup() + "_numParamsIndividual";
-	  objectGroups[k]->set_tableParamsNum(control[key], input_colsep, input_commentchar);
-	} catch (except) {
-	  stringstream errmsg;
-	  errmsg << "Failed to read table of individual scalar parameters for objects of object group '" <<
-	    objectGroups[k]->get_idObjectGroup() << "'.";
-	  except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	  throw(e);
-	}
+        try {
+          key= objectGroups[k]->get_idObjectGroup() + "_numParamsIndividual";
+          objectGroups[k]->set_tableParamsNum(control[key], input_colsep, input_commentchar);
+        } catch (except) {
+          stringstream errmsg;
+          errmsg << "Failed to read table of individual scalar parameters for objects of object group '" <<
+            objectGroups[k]->get_idObjectGroup() << "'.";
+          except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+          throw(e);
+        }
       }
     } catch (except) {
       except e(__PRETTY_FUNCTION__,"Failed to read table(s) of individual scalar parameters.",__FILE__,__LINE__);
@@ -336,7 +336,7 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Initializing individual scalar parameters");
     try {
       for (unsigned int i=0; i<objects.size(); i++) {
-	objects[i]->init_paramsNum();
+        objects[i]->init_paramsNum();
       }
     } catch (except) {
       except e(__PRETTY_FUNCTION__, "Failed to initialize individual scalar parameters.", __FILE__, __LINE__);
@@ -351,14 +351,14 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Setting shared parameter functions");
     for (unsigned int k=0; k<objectGroups.size(); k++) {
       try {
-	string key= objectGroups[k]->get_idObjectGroup() + "_funParamsShared";
-	objectGroups[k]->set_sharedParamsFun(control[key], input_colsep, input_commentchar);
+        string key= objectGroups[k]->get_idObjectGroup() + "_funParamsShared";
+        objectGroups[k]->set_sharedParamsFun(control[key], input_colsep, input_commentchar);
       } catch (except) {
-	stringstream errmsg;
-	errmsg << "Failed to set shared parameter functions for object group '" <<
-	  objectGroups[k]->get_idObjectGroup() << "'.";
-	except e(__PRETTY_FUNCTION__,errmsg, __FILE__, __LINE__);
-	throw(e);
+        stringstream errmsg;
+        errmsg << "Failed to set shared parameter functions for object group '" <<
+          objectGroups[k]->get_idObjectGroup() << "'.";
+        except e(__PRETTY_FUNCTION__,errmsg, __FILE__, __LINE__);
+        throw(e);
       }
     }
 
@@ -366,14 +366,14 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Setting shared scalar parameters");
     for (unsigned int k=0; k<objectGroups.size(); k++) {
       try {
-	string key= objectGroups[k]->get_idObjectGroup() + "_numParamsShared";
-	objectGroups[k]->set_sharedParamsNum(control[key], input_colsep, input_commentchar);
+        string key= objectGroups[k]->get_idObjectGroup() + "_numParamsShared";
+        objectGroups[k]->set_sharedParamsNum(control[key], input_colsep, input_commentchar);
       } catch (except) {
-	stringstream errmsg;
-	errmsg << "Failed to set shared scalar parameters for object group '" <<
-	  objectGroups[k]->get_idObjectGroup() << "'.";
-	except e(__PRETTY_FUNCTION__,errmsg, __FILE__, __LINE__);
-	throw(e);
+        stringstream errmsg;
+        errmsg << "Failed to set shared scalar parameters for object group '" <<
+          objectGroups[k]->get_idObjectGroup() << "'.";
+        except e(__PRETTY_FUNCTION__,errmsg, __FILE__, __LINE__);
+        throw(e);
       }
     }
 
@@ -382,7 +382,7 @@ int main (const int argc, const char* argv[]) {
     try {
       unsigned int bufferSize= as_unsigned_integer(control["externalInput_bufferSize"]);
       externalInputs.init(control["table_externalInput_datafiles"],
-	input_colsep, input_commentchar, bufferSize);
+        input_colsep, input_commentchar, bufferSize);
     } catch (except) {
       except e(__PRETTY_FUNCTION__, "Cannot initialize time series of external variables.", __FILE__, __LINE__);
       throw(e);
@@ -392,9 +392,9 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Assigning external time series to objects");
     try {
       table tab;
-	    tab.read(control["table_externalInput_locations"], true, input_colsep, input_commentchar);
+            tab.read(control["table_externalInput_locations"], true, input_colsep, input_commentchar);
       for (unsigned int i=0; i<objects.size(); i++) {
-	objects[i]->assign_inputsExt(tab, externalInputs);
+        objects[i]->assign_inputsExt(tab, externalInputs);
       }
       tab.clear();
     } catch (except) {
@@ -406,9 +406,9 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Setting initial values of scalar state variables");
     try {
       table tab;
-	    tab.read(control["table_initialValues_scal"], true, input_colsep, input_commentchar);
+            tab.read(control["table_initialValues_scal"], true, input_colsep, input_commentchar);
       for (unsigned int i=0; i<objects.size(); i++) {
-	objects[i]->init_statesScal(tab);
+        objects[i]->init_statesScal(tab);
       }
       tab.clear();
     } catch (except) {
@@ -418,9 +418,9 @@ int main (const int argc, const char* argv[]) {
     lg.add(silent, "Setting initial values of vector state variables");
     try {
       table tab;
-	    tab.read(control["table_initialValues_vect"], true, input_colsep, input_commentchar);
+            tab.read(control["table_initialValues_vect"], true, input_colsep, input_commentchar);
       for (unsigned int i=0; i<objects.size(); i++) {
-	objects[i]->init_statesVect(tab);
+        objects[i]->init_statesVect(tab);
       }
       tab.clear();
     } catch (except) {
@@ -461,24 +461,24 @@ int main (const int argc, const char* argv[]) {
       // Print state
       comptime.progressStepIndex= progressIndex(simtime.stepCounter, simtime.numberOfSteps, globalConst::progressSteps);
       if (comptime.progressStepIndex < globalConst::progressSteps.size()) {   
-	stringstream msg;
-	msg << setw(2) << setfill('0') << globalConst::progressSteps[comptime.progressStepIndex] <<
-	    "% done.  Computing time remaining: " << floor(comptime.seconds_remain/3600.) << "h " <<
-	    setw(2) << setfill('0') << floor((comptime.seconds_remain%3600)/60.) << "m " <<
-	    setw(2) << setfill('0') << (comptime.seconds_remain%60) << "s ";
-	lg.add(silent, msg.str());
+        stringstream msg;
+        msg << setw(2) << setfill('0') << globalConst::progressSteps[comptime.progressStepIndex] <<
+            "% done.  Computing time remaining: " << floor(comptime.seconds_remain/3600.) << "h " <<
+            setw(2) << setfill('0') << floor((comptime.seconds_remain%3600)/60.) << "m " <<
+            setw(2) << setfill('0') << (comptime.seconds_remain%60) << "s ";
+        lg.add(silent, msg.str());
       }
 
       // Update external input variables
       try {
-	externalInputs.update(simtime.stepStart, simtime.stepStart + simtime.delta_t);
+        externalInputs.update(simtime.stepStart, simtime.stepStart + simtime.delta_t);
       } catch (except) {
-	stringstream errmsg;
-	errmsg << "Updating of external input variables failed in time step " <<
-	  simtime.stepCounter << " of " << simtime.numberOfSteps << " starting at " <<
-	  simtime.stepStart.get("-",":"," ") << ".";
-	except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	throw(e);
+        stringstream errmsg;
+        errmsg << "Updating of external input variables failed in time step " <<
+          simtime.stepCounter << " of " << simtime.numberOfSteps << " starting at " <<
+          simtime.stepStart.get("-",":"," ") << ".";
+        except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+        throw(e);
       }
 
       // Set time stamp for output
@@ -491,84 +491,81 @@ int main (const int argc, const char* argv[]) {
       // Outer loop (loop over levels -- sequential processing)
       for (unsigned int ix_outer=0; ix_outer < processingTree.size(); ix_outer++) {
 
-	unsigned int nExcept= 0;
-	#pragma omp parallel for if(processingTree[ix_outer].size() >= singlethread_if_less_than)
-	// Inner loop (loop over objects of one level -- may be processed in parallel)
-	for (unsigned int ix_inner=0; ix_inner < processingTree[ix_outer].size(); ix_inner++) {
-	  // Index of current object
-	  unsigned int i=processingTree[ix_outer][ix_inner];
-	  // Run current object
-	  try {
-	    objects[i]->simulate(simtime.delta_t);        
-	  } catch (except) {
-	    stringstream errmsg;
-	    errmsg << "Simulation failed for object '" << objects[i]->get_idObject() <<
-	      "' in time step " << simtime.stepCounter << " of " << simtime.numberOfSteps <<
-	      " starting at " << simtime.stepStart.get("-",":"," ") << ".";
-	    except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	    nExcept++;
-	  }         
-	  // Check for floating point exceptions
-	  if (trap_fpe) {
-	    try {
-	      objects[i]->checkFPE();        
-	    } catch (except) {
-	      stringstream errmsg;
-	      errmsg << "Floating point exception occurred in object '" << objects[i]->get_idObject() <<
-		"' in time step " << simtime.stepCounter << " of " << simtime.numberOfSteps <<
-		" starting at " << simtime.stepStart.get("-",":"," ") << ".";
-	      except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	      nExcept++;
-	    }
-	  }
-	} // End of loop over objects (inner)
-	if (nExcept > 0) {
-	  stringstream errmsg;
-	  errmsg << nExcept << " exceptions registered in time step " << simtime.stepCounter <<
-	    " of " << simtime.numberOfSteps << ".";
-	  except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	  throw(e);
-	}
+        unsigned int nExcept= 0;
+        #pragma omp parallel for if(processingTree[ix_outer].size() >= singlethread_if_less_than)
+        // Inner loop (loop over objects of one level -- may be processed in parallel)
+        for (unsigned int ix_inner=0; ix_inner < processingTree[ix_outer].size(); ix_inner++) {
+          // Index of current object
+          unsigned int i=processingTree[ix_outer][ix_inner];
+          // Run current object
+          try {
+            objects[i]->simulate(simtime.delta_t);        
+          } catch (except) {
+            stringstream errmsg;
+            errmsg << "Simulation failed for object '" << objects[i]->get_idObject() <<
+              "' in time step " << simtime.stepCounter << " of " << simtime.numberOfSteps <<
+              " starting at " << simtime.stepStart.get("-",":"," ") << ".";
+            except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+            nExcept++;
+          }         
+          // Check for floating point exceptions
+          if (trap_fpe) {
+            try {
+              objects[i]->checkFPE();        
+            } catch (except) {
+              stringstream errmsg;
+              errmsg << "Floating point exception occurred in object '" << objects[i]->get_idObject() <<
+                "' in time step " << simtime.stepCounter << " of " << simtime.numberOfSteps <<
+                " starting at " << simtime.stepStart.get("-",":"," ") << ".";
+              except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+              nExcept++;
+            }
+          }
+          // Output results
+          try {
+            objects[i]->output_selected(simtime.stepCounter==1,
+              simtime.stepCounter==simtime.numberOfSteps,
+              outdir, outfmt,
+              output_colsep, simtime.stepEnd_asString, simtime.delta_t);
+            objects[i]->output_debug(simtime.stepCounter==1, outdir,
+              output_colsep, simtime.stepEnd_asString);
+          } catch (except) {
+            stringstream errmsg;
+            errmsg << "Cannot print output for object '" << objects[i]->get_idObject() <<
+              "' at end of time step " << simtime.stepCounter << " of " << simtime.numberOfSteps <<
+              " starting at " << simtime.stepStart.get("-",":"," ") << ".";
+            except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+            throw(e);
+          }
+        } // End of loop over objects (inner)
+        if (nExcept > 0) {
+          stringstream errmsg;
+          errmsg << nExcept << " exceptions registered in time step " << simtime.stepCounter <<
+            " of " << simtime.numberOfSteps << ".";
+          except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+          throw(e);
+        }
       } // End of loop over objects (outer)
-
-      // Output results
-      for (unsigned int i=0; i<objects.size(); i++) {
-	try {
-	  objects[i]->output_selected(simtime.stepCounter==1,
-            simtime.stepCounter==simtime.numberOfSteps,
-            outdir, outfmt,
-	    output_colsep, simtime.stepEnd_asString, simtime.delta_t);
-	  objects[i]->output_debug(simtime.stepCounter==1, outdir,
-	    output_colsep, simtime.stepEnd_asString);
-	} catch (except) {
-	  stringstream errmsg;
-	  errmsg << "Cannot print output for object '" << objects[i]->get_idObject() <<
-	    "' at end of time step " << simtime.stepCounter << " of " << simtime.numberOfSteps <<
-	    " starting at " << simtime.stepStart.get("-",":"," ") << ".";
-	  except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	  throw(e);
-	}
-      }
 
       // Save state
       try {
-	if ((saveFinalState) & (simtime.stepCounter == simtime.numberOfSteps)) {
-	  times_stateOutput.clear();
-	  times_stateOutput.push_back(simtime.stepStart + simtime.delta_t);
-	}
-	saveState(outdir, (simtime.stepStart + simtime.delta_t), times_stateOutput,
-	  output_colsep, output_commentchar, objects);
+        if ((saveFinalState) & (simtime.stepCounter == simtime.numberOfSteps)) {
+          times_stateOutput.clear();
+          times_stateOutput.push_back(simtime.stepStart + simtime.delta_t);
+        }
+        saveState(outdir, (simtime.stepStart + simtime.delta_t), times_stateOutput,
+          output_colsep, output_commentchar, objects);
       } catch (except) {
-	stringstream errmsg;
-	errmsg << "Cannot save object state at " << simtime.stepEnd_asString << ".";
-	except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-	throw(e);
+        stringstream errmsg;
+        errmsg << "Cannot save object state at " << simtime.stepEnd_asString << ".";
+        except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+        throw(e);
       }
 
       // Estimate remaining computing time (for a single run)
       comptime.now= time(0);
       comptime.seconds_remain= ceil(difftime(comptime.now, comptime.ini) /
-	simtime.stepCounter * (simtime.numberOfSteps - simtime.stepCounter));
+        simtime.stepCounter * (simtime.numberOfSteps - simtime.stepCounter));
 
     } // End time loop
     lg.add(silent, "Simulation finished");
@@ -616,13 +613,13 @@ int main (const int argc, const char* argv[]) {
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
     e.print(file_err,format_err);
     return(1);
-	} catch (...) {
+        } catch (...) {
     lg.add(silent, "Stopped due to unknown error.");
     stringstream errmsg;
     errmsg << "Stopped due to unknown error. Traceback not available. Please report this error.";
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
     e.print(file_err,format_err);
     return(1);
-	}
+        }
 }
 
