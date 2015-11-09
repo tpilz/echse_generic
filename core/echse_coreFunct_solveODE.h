@@ -17,7 +17,8 @@ void odesolve_nonstiff(
   const double eps,
   const unsigned int nmax,
   abstractObject* objPtr,
-  vector<double> &ynew
+  vector<double> &ynew,
+	const int choice
 );
 
 #endif

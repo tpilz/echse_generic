@@ -398,6 +398,31 @@ void RKCK(
   }
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// Simple explicit Euler integration of state variable(s).
+//
+// ATTENTION: Method is not very accurate, nor stable. You should use this method
+// only for simple ODEs.
+////////////////////////////////////////////////////////////////////////////////
+void euler_ex(
+	const vector<double> &ystart,
+	const unsigned int delta_t,
+	abstractObject* objPtr,
+	vector<double> &ynew
+) {
+	// local data
+	const unsigned int ny= ystart.size();
+	vector<double> dydx(ny);
+	
+	// compute derivatives
+	objPtr->derivsScal(0., ystart, dydx, delta_t);
+	// update states
+	for (unsigned int i=0; i<ny; i++)
+		ynew[i] = ystart[i] + dydx[i] * delta_t;
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Wrapper for use within the 'simulate' method of a class
 //
@@ -410,6 +435,7 @@ void RKCK(
 //   100,                // nmax:    The maximum number of sub-time steps
 //   this,               // objPtr:  Pointer to the current object
 //   set_stateScal_all() // ynew:    The updated values of the state variables
+//   1                   // choice:  Choice flag of method for numerical integration
 // )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -420,18 +446,38 @@ void odesolve_nonstiff(
   const double eps,
   const unsigned int nmax,
   abstractObject* objPtr,
-  vector<double> &ynew
+  vector<double> &ynew,
+	const int choice
 ) {
-  RKCK(
-    ystart,
-    0.,                                        // x1
-    static_cast<double>(delta_t),              // x2
-    eps,
-    static_cast<double>(delta_t),              // h1
-    delta_t/max(1.,static_cast<double>(nmax)), // hmin
-    objPtr,
-    delta_t,
-    ynew
-  );
+	switch(choice) {
+		case 1: // Higher order Runge-Kutta method
+			RKCK(
+				ystart,
+				0.,                                        // x1
+				static_cast<double>(delta_t),              // x2
+				eps,
+				static_cast<double>(delta_t),              // h1
+				delta_t/max(1.,static_cast<double>(nmax)), // hmin
+				objPtr,
+				delta_t,
+				ynew
+			);
+			break;
+			
+		case 2: // Simple explicit Euler integration
+			euler_ex(
+				ystart,
+				delta_t,
+				objPtr,
+				ynew
+			);
+			break;
+			
+		default :
+			stringstream errmsg;
+      errmsg << "Invalid choice of numerical integration method! Currently supported is one of {1,2}.";
+      except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+      throw(e);
+	}
 }
 
