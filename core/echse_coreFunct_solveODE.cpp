@@ -403,7 +403,7 @@ void RKCK(
 // Simple explicit Euler integration of state variable(s).
 //
 // ATTENTION: Method is not very accurate, nor stable. You should use this method
-// only for simple ODEs.
+// only for very(!) simple ODEs.
 ////////////////////////////////////////////////////////////////////////////////
 void euler_ex(
 	const vector<double> &ystart,
@@ -420,6 +420,149 @@ void euler_ex(
 	// update states
 	for (unsigned int i=0; i<ny; i++)
 		ynew[i] = ystart[i] + dydx[i] * delta_t;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Fourth order explicit Runge-Kutta method.
+//
+// Apated from Press et al. (2002), v. 2.11, eq. 16.1.3
+//
+// Classical, often used method. However, this version contains no error control
+// nor adaptive step size control. It should only be used for simle problems or
+// experimentation.
+////////////////////////////////////////////////////////////////////////////////
+void rk4(
+	const vector<double> &y,
+	const double x,
+	const double h,
+	abstractObject* objPtr,
+	vector<double> &ynew
+) {
+	// local data
+	unsigned int i;
+	double xh,hh,h6;
+
+	int n=y.size();
+	vector<double> dydx(n),dym(n),dyt(n),yt(n);
+	hh=h*0.5;
+	h6=h/6.0;
+	xh=x+hh;
+	
+	// first step
+	objPtr->derivsScal(x, y, dydx, h);
+	
+	// second step
+	for (i=0;i<n;i++) yt[i]=y[i]+hh*dydx[i];
+	objPtr->derivsScal(xh, yt, dyt, h);
+	
+	// third step
+	for (i=0;i<n;i++) yt[i]=y[i]+hh*dyt[i];
+	objPtr->derivsScal(xh, yt, dym, h);
+	
+	for (i=0;i<n;i++) {
+		yt[i]=y[i]+h*dym[i];
+		dym[i] += dyt[i];
+	}
+	
+	// fourth step
+	objPtr->derivsScal(x+h, yt, dyt, h);
+	
+	// accumulate increments with proper weights
+	for (i=0;i<n;i++)
+		yout[i]=y[i]+h6*(dydx[i]+dyt[i]+2.0*dym[i]);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Second order Runge-Kutta (midpoint) method.
+//
+// Adapted from Press et al. (2002), v. 2.11, eq. 16.1.2
+//
+// ATTENTION: Method is not very accurate, no accuracy check included. Use for
+// simple problems only!
+////////////////////////////////////////////////////////////////////////////////
+void rk2(
+	const vector<double> &ystart,
+	const double x1,
+	const unsigned int delta_t,
+	abstractObject* objPtr,
+	vector<double> &ynew
+) {
+	// local data
+	const unsigned int ny= ystart.size();
+	vector<double> dydx(ny), ymid(ny);
+	
+	// compute derivatives at start point and integrate to midpoint
+	objPtr->derivsScal(x1, ystart, dydx, delta_t);
+	for (unsigned int i=0; i<ny; i++)
+		ymid[i] = ystart[i] + 0.5 * dydx[i] * delta_t;
+	
+	// compute derivatives at midpoint and integrate to endpoint
+	objPtr->derivsScal(x1 + 0.5*delta_t, ymid, dydx, delta_t);
+	for (unsigned int i=0; i<ny; i++)
+		ynew[i] = ystart[i] + dydx[i] * delta_t;
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Simple implicit Euler integration of state variable(s).
+//
+// ATTENTION: Method can handle simple stiff ODEs but is very inefficient. You should
+// use this method only for simple ODEs. For complex problems it might fail.
+////////////////////////////////////////////////////////////////////////////////
+void euler_im(
+	const vector<double> &ystart,
+	const unsigned int delta_t,
+	abstractObject* objPtr,
+	const double eps,
+	const unsigned int nmax,
+	vector<double> &ynew
+) {
+	// local data
+	const unsigned int ny= ystart.size();
+	vector<double> dydx(ny), yini(ny), yimprove(ny);
+	double errmax;
+	unsigned int n = 0;
+	
+	// compute derivatives and initial estimate of states at end of time step (explicit Euler)
+	objPtr->derivsScal(0., ystart, dydx, delta_t);
+	for (unsigned int i=0; i<ny; i++)
+		yini[i] = ystart[i] + dydx[i] * delta_t;
+	
+	// iterate over maximum of nmax steps until solution of eps accuracy is found; throw exception if this fails
+	while(true) {
+		n += 1;
+		// use estimated state at end of time step to compute derivative and improved state estimate
+		objPtr->derivsScal(0., yini, dydx, delta_t);
+		for (unsigned int i=0; i<ny; i++)
+			yimprove[i] = ystart[i] + dydx[i] * delta_t;
+		
+		// check accuracy (deviation between initial and improved estimate should be small enough)
+		errmax = 0.;
+		for (unsigned int i=0; i<ny; i++)
+			errmax = max(errmax, abs(yini[i] - yimprove[i]));
+		errmax = errmax / eps;
+
+		// Exit loop if step succeeded
+		if (errmax <= 1.) {
+			ynew = yimprove;
+			break;
+		}
+		
+		// not more than specified maximum number of sub steps
+		if(n == nmax) {
+			stringstream errmsg;
+			errmsg << "Implicit Euler integration failed! Could not find a solution of" <<
+				" requested accuracy " << eps << " within " << nmax << " integration steps.";
+			except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+			throw(e);
+		}
+			
+		// set improved state estimate to new initial value
+		yini = yimprove;
+	}
+
 }
 
 
@@ -450,7 +593,36 @@ void odesolve_nonstiff(
 	const int choice
 ) {
 	switch(choice) {
-		case 1: // Higher order Runge-Kutta method
+		case 1: // Simple explicit Euler integration
+			euler_ex(
+				ystart,
+				delta_t,
+				objPtr,
+				ynew
+			);
+			break;
+			
+		case 2: // Second order explicit Runge-Kutta (midpoint) method
+			rk2(
+				ystart,
+				0.,
+				delta_t,
+				objPtr,
+				ynew
+			);
+			break;
+			
+		case 3: // Fourth order explicit Runge-Kutta method
+			rk4(
+				ystart,
+				0.,
+				delta_t,
+				objPtr,
+				ynew
+			);
+			break;
+			
+		case 4: // Fifth order Cash-Karp Runge-Kutta; adaptive step size control
 			RKCK(
 				ystart,
 				0.,                                        // x1
@@ -464,18 +636,20 @@ void odesolve_nonstiff(
 			);
 			break;
 			
-		case 2: // Simple explicit Euler integration
-			euler_ex(
+		case 5: // Implicit Euler method
+			euler_im(
 				ystart,
 				delta_t,
 				objPtr,
+				eps,
+				nmax,
 				ynew
 			);
 			break;
 			
 		default :
 			stringstream errmsg;
-      errmsg << "Invalid choice of numerical integration method! Currently supported is one of {1,2}.";
+      errmsg << "Invalid choice of numerical integration method! Currently supported is one of {1,2,3,4}.";
       except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
       throw(e);
 	}
