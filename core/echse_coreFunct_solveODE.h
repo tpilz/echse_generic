@@ -8,6 +8,10 @@
 
 #include "except/except.h"
 
+// gsl (GNU scientific library) with ode solvers and error handling
+#include <gsl/gsl_odeiv2.h>
+#include <gsl/gsl_errno.h>
+
 using namespace std;
 
 // Interface of the ODE solver -- See the .cpp file for documentation

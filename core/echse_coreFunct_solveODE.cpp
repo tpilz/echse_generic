@@ -443,7 +443,7 @@ void rk4(
 	unsigned int i;
 	double xh,hh,h6;
 
-	int n=y.size();
+	unsigned int n=y.size();
 	vector<double> dydx(n),dym(n),dyt(n),yt(n);
 	hh=h*0.5;
 	h6=h/6.0;
@@ -470,7 +470,7 @@ void rk4(
 	
 	// accumulate increments with proper weights
 	for (i=0;i<n;i++)
-		yout[i]=y[i]+h6*(dydx[i]+dyt[i]+2.0*dym[i]);
+		ynew[i]=y[i]+h6*(dydx[i]+dyt[i]+2.0*dym[i]);
 }
 
 
@@ -502,6 +502,124 @@ void rk2(
 	objPtr->derivsScal(x1 + 0.5*delta_t, ymid, dydx, delta_t);
 	for (unsigned int i=0; i<ny; i++)
 		ynew[i] = ystart[i] + dydx[i] * delta_t;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Second order Runge-Kutta (midpoint) method.
+//
+// Use implementation from external 'GNU Scientific Library' (GSL).
+//
+// ATTENTION: Method is not very accurate, no accuracy check included. Use for
+// simple problems only!
+////////////////////////////////////////////////////////////////////////////////
+// define a structure to hold parameters for func()
+struct param_type {
+	abstractObject* objPtr; 
+	const unsigned int delta_t;
+	unsigned int ny;
+};
+
+// function that is iteratively called to calculate deviations during numerical integration (has an interface pre-defined by GSL; calls derivsScal())
+int func(
+	double t,
+	const double y[],
+	double f[],
+	void *params
+) {
+	// get parameters
+	struct param_type *pars = (param_type*)params;
+	
+	// convert types of arguments to those needed by derivsScal(); i.e. conversions from array pointer to vector
+	vector<double> u(y, y+pars->ny);
+	vector<double> dudt(f, f+pars->ny);
+	
+	// call actual dervisScal() function
+	pars->objPtr->derivsScal(t, u, dudt, pars->delta_t);
+	
+	// set output (convert vector to array)
+	for (unsigned int i=0; i<pars->ny; i++) f[i] = dudt[i];
+
+	return GSL_SUCCESS;
+}
+
+// Apply explicit GSL solver without sub-step adaptation
+void gsl_ex(
+	const int choice,
+	const vector<double> &ystart,
+	double x1,
+	const unsigned int delta_t,
+	abstractObject* objPtr,
+	vector<double> &ynew
+) {
+	// local data (GSL uses arrays instead of vectors)
+	unsigned int i;
+	const unsigned int ny = ystart.size();
+	gsl_odeiv2_step * s;
+	double *y = new double [ny];
+	double *dydx_out = new double [ny]();
+	double *yerr = new double [ny]();
+	for (i=0; i<ystart.size(); i++) y[i] = ystart[i];
+
+	// create structure to store parameters of ode system
+	struct param_type pars = {objPtr, delta_t, ny};
+	
+	// define ODE system as GSL specific data type
+	gsl_odeiv2_system sys = {func, NULL, ny, &pars};
+	
+	// allocate instance of stepping function
+	switch(choice) {
+		case 1: // Second order Runge-Kutta (midpoint) method
+			s = gsl_odeiv2_step_alloc(gsl_odeiv2_step_rk2, ny);
+			break;
+			
+		case 2: // Fourth order Runge-Kutta method
+			s = gsl_odeiv2_step_alloc(gsl_odeiv2_step_rk4, ny);
+			break;
+			
+		case 3: // Fourth order Runge-Kutta Fehlberg method
+			s = gsl_odeiv2_step_alloc(gsl_odeiv2_step_rkf45, ny);
+			break;
+			
+		case 4: // Fourth order Runge-Kutta Cash-Karp method
+			s = gsl_odeiv2_step_alloc(gsl_odeiv2_step_rkck, ny);
+			break;
+			
+		case 5: // Eigth order Runge-Kutta Prince-Dormand method
+			s = gsl_odeiv2_step_alloc(gsl_odeiv2_step_rk8pd, ny);
+			break;
+			
+		default: 
+			stringstream errmsg;
+			errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
+				"{1,2,3,4,5} and one of {11,12} for implementations by 'GNU Scientific Library' (GSL).";
+			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+			throw(e);
+	}
+	
+	// apply stepping function
+	int status = gsl_odeiv2_step_apply (s, x1, delta_t, y, yerr, NULL, dydx_out, &sys);
+	
+	// free allocated storage for stepping function
+	gsl_odeiv2_step_free(s);
+	
+	// check status
+	if (status != GSL_SUCCESS) {
+    stringstream errmsg;
+    errmsg << "An error occurred during numerical integration using using second order Runge-Kutta method from GSL library! " <<
+			"Return value: " << status;
+    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+	}
+		
+	// assign output value
+	ynew.assign(y, y+ny);
+	
+	// delete array pointers
+ 	delete[] y;
+ 	y = NULL;
+ 	delete[] dydx_out;
+ 	dydx_out = NULL;
+ 	delete[] yerr;
+ 	yerr = NULL;
 }
 
 
@@ -648,10 +766,23 @@ void odesolve_nonstiff(
 			break;
 			
 		default :
-			stringstream errmsg;
-      errmsg << "Invalid choice of numerical integration method! Currently supported is one of {1,2,3,4}.";
-      except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
-      throw(e);
+			// solvers from external GSL library
+			if (choice > 10) {
+				gsl_ex(
+					choice - 10,
+					ystart,
+					0.,
+					delta_t,
+					objPtr,
+					ynew
+				);
+			} else {
+				stringstream errmsg;
+				errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
+					"{1,2,3,4,5} and one of {11,12} for implementations by 'GNU Scientific Library' (GSL).";
+				except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+				throw(e);
+			}
 	}
 }
 

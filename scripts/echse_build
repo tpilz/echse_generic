@@ -86,7 +86,7 @@ fi
 compi="g++"
 
 # Compiler flags
-flags="-ansi -iquote$cpplib -iquote$coreDir -iquote$genDir -iquote$userDirCls -iquote$userDirPrc -L$cpplib -Wall -Wextra -lstdc++ -std=c++0x -pedantic -ftrapping-math -fbounds-check -O3 -fopenmp"
+flags="-lgsl -lgslcblas -ansi -iquote$cpplib -iquote$coreDir -iquote$genDir -iquote$userDirCls -iquote$userDirPrc -L$cpplib -Wall -Wextra -lstdc++ -std=c++0x -pedantic -ftrapping-math -fbounds-check -O3 -fopenmp"
 
 # List of source files of the generic model core
 pattern="$coreDir/*.cpp"
