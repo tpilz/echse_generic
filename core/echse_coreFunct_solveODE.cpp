@@ -504,13 +504,71 @@ void rk2(
 		ynew[i] = ystart[i] + dydx[i] * delta_t;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
-// Second order Runge-Kutta (midpoint) method.
+// Simple implicit Euler integration of state variable(s).
 //
-// Use implementation from external 'GNU Scientific Library' (GSL).
+// ATTENTION: Method can handle simple stiff ODEs but is very inefficient. You should
+// use this method only for simple ODEs. For complex problems it might fail.
+////////////////////////////////////////////////////////////////////////////////
+void euler_im(
+	const vector<double> &ystart,
+	const unsigned int delta_t,
+	abstractObject* objPtr,
+	const double eps,
+	const unsigned int nmax,
+	vector<double> &ynew
+) {
+	// local data
+	const unsigned int ny= ystart.size();
+	vector<double> dydx(ny), yini(ny), yimprove(ny);
+	double errmax;
+	unsigned int n = 0;
+	
+	// compute derivatives and initial estimate of states at end of time step (explicit Euler)
+	objPtr->derivsScal(0., ystart, dydx, delta_t);
+	for (unsigned int i=0; i<ny; i++)
+		yini[i] = ystart[i] + dydx[i] * delta_t;
+	
+	// iterate over maximum of nmax steps until solution of eps accuracy is found; throw exception if this fails
+	while(true) {
+		n += 1;
+		// use estimated state at end of time step to compute derivative and improved state estimate
+		objPtr->derivsScal(0., yini, dydx, delta_t);
+		for (unsigned int i=0; i<ny; i++)
+			yimprove[i] = ystart[i] + dydx[i] * delta_t;
+		
+		// check accuracy (deviation between initial and improved estimate should be small enough)
+		errmax = 0.;
+		for (unsigned int i=0; i<ny; i++)
+			errmax = max(errmax, abs(yini[i] - yimprove[i]));
+		errmax = errmax / eps;
+
+		// Exit loop if step succeeded
+		if (errmax <= 1.) {
+			ynew = yimprove;
+			break;
+		}
+		
+		// not more than specified maximum number of sub steps
+		if(n == nmax) {
+			stringstream errmsg;
+			errmsg << "Implicit Euler integration failed! Could not find a solution of" <<
+				" requested accuracy " << eps << " within " << nmax << " integration steps.";
+			except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
+			throw(e);
+		}
+			
+		// set improved state estimate to new initial value
+		yini = yimprove;
+	}
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Implementations from external 'GNU Scientific Library' (GSL).
 //
-// ATTENTION: Method is not very accurate, no accuracy check included. Use for
-// simple problems only!
 ////////////////////////////////////////////////////////////////////////////////
 // define a structure to hold parameters for func()
 struct param_type {
@@ -591,7 +649,7 @@ void gsl_ex(
 		default: 
 			stringstream errmsg;
 			errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
-				"{1,2,3,4,5} and one of {11,12} for implementations by 'GNU Scientific Library' (GSL).";
+				"{1-5} and one of {11-15,21-25} for implementations by 'GNU Scientific Library' (GSL).";
 			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 			throw(e);
 	}
@@ -605,7 +663,7 @@ void gsl_ex(
 	// check status
 	if (status != GSL_SUCCESS) {
     stringstream errmsg;
-    errmsg << "An error occurred during numerical integration using using second order Runge-Kutta method from GSL library! " <<
+    errmsg << "An error occurred during numerical integration using GSL library! " <<
 			"Return value: " << status;
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 	}
@@ -623,64 +681,92 @@ void gsl_ex(
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-// Simple implicit Euler integration of state variable(s).
-//
-// ATTENTION: Method can handle simple stiff ODEs but is very inefficient. You should
-// use this method only for simple ODEs. For complex problems it might fail.
-////////////////////////////////////////////////////////////////////////////////
-void euler_im(
+// Apply explicit GSL solver with sub-step adaptation
+void gsl_ex_adapt(
+	const int choice,
 	const vector<double> &ystart,
+	double x1,
 	const unsigned int delta_t,
-	abstractObject* objPtr,
 	const double eps,
 	const unsigned int nmax,
+	abstractObject* objPtr,
 	vector<double> &ynew
 ) {
-	// local data
-	const unsigned int ny= ystart.size();
-	vector<double> dydx(ny), yini(ny), yimprove(ny);
-	double errmax;
-	unsigned int n = 0;
-	
-	// compute derivatives and initial estimate of states at end of time step (explicit Euler)
-	objPtr->derivsScal(0., ystart, dydx, delta_t);
-	for (unsigned int i=0; i<ny; i++)
-		yini[i] = ystart[i] + dydx[i] * delta_t;
-	
-	// iterate over maximum of nmax steps until solution of eps accuracy is found; throw exception if this fails
-	while(true) {
-		n += 1;
-		// use estimated state at end of time step to compute derivative and improved state estimate
-		objPtr->derivsScal(0., yini, dydx, delta_t);
-		for (unsigned int i=0; i<ny; i++)
-			yimprove[i] = ystart[i] + dydx[i] * delta_t;
-		
-		// check accuracy (deviation between initial and improved estimate should be small enough)
-		errmax = 0.;
-		for (unsigned int i=0; i<ny; i++)
-			errmax = max(errmax, abs(yini[i] - yimprove[i]));
-		errmax = errmax / eps;
+	// local data (GSL uses arrays instead of vectors)
+	unsigned int i;
+	const unsigned int ny = ystart.size();
+	int status;
+	gsl_odeiv2_driver * d;
+	double *y = new double [ny];
+	for (i=0; i<ystart.size(); i++) y[i] = ystart[i];
 
-		// Exit loop if step succeeded
-		if (errmax <= 1.) {
-			ynew = yimprove;
+	// create structure to store parameters of ode system
+	struct param_type pars = {objPtr, delta_t, ny};
+	
+	// define ODE system as GSL specific data type
+	gsl_odeiv2_system sys = {func, NULL, ny, &pars};
+	
+	// allocate instance of driver object
+	// NOTE: if relative error eps_rel is set to zero, absolute error eps_abs is exactly equal to eps defined in odesolve_nonstiff(); cf. GSL manual 27.3
+	switch(choice) {
+		case 1: // Second order Runge-Kutta (midpoint) method
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk2, delta_t, eps, 0.);
 			break;
-		}
-		
-		// not more than specified maximum number of sub steps
-		if(n == nmax) {
-			stringstream errmsg;
-			errmsg << "Implicit Euler integration failed! Could not find a solution of" <<
-				" requested accuracy " << eps << " within " << nmax << " integration steps.";
-			except e(__PRETTY_FUNCTION__, errmsg, __FILE__, __LINE__);
-			throw(e);
-		}
 			
-		// set improved state estimate to new initial value
-		yini = yimprove;
+		case 2: // Fourth order Runge-Kutta method
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4, delta_t, eps, 0.);
+			break;
+			
+		case 3: // Fourth order Runge-Kutta Fehlberg method
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rkf45, delta_t, eps, 0.);
+			break;
+			
+		case 4: // Fourth order Runge-Kutta Cash-Karp method
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rkck, delta_t, eps, 0.);
+			break;
+			
+		case 5: // Eigth order Runge-Kutta Prince-Dormand method
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk8pd, delta_t, eps, 0.);
+			break;
+			
+		default: 
+			stringstream errmsg;
+			errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
+				"{1-5} and one of {11-15,21-25} for implementations by 'GNU Scientific Library' (GSL).";
+			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+			throw(e);
 	}
-
+	
+	// set maximum no. of sub-steps
+	status = gsl_odeiv2_driver_set_nmax(d, nmax);
+	
+	if (status != GSL_SUCCESS) {
+    stringstream errmsg;
+    errmsg << "An error occurred during definition of maximum number of sub-steps for numerical integration using GSL! " <<
+			"Return value: " << status;
+    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+	}
+	
+	// apply driver function (evolves state y from x1 to delta_t with adaptive sub-stepping)
+	status = gsl_odeiv2_driver_apply (d, &x1, delta_t, y);
+	
+	// free allocated storage for driver object
+	gsl_odeiv2_driver_free(d);
+	
+	// check status
+	if (status != GSL_SUCCESS) {
+    stringstream errmsg;
+    errmsg << "An error occurred during numerical integration using GSL library! " <<
+			"Return value: " << status;
+    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+	}
+		
+	// assign output value
+	ynew.assign(y, y+ny);
+	
+	// delete array pointers
+ 	delete[] y;
+ 	y = NULL;
 }
 
 
@@ -767,7 +853,7 @@ void odesolve_nonstiff(
 			
 		default :
 			// solvers from external GSL library
-			if (choice > 10) {
+			if ( (choice > 10) && (choice <= 20) ) {
 				gsl_ex(
 					choice - 10,
 					ystart,
@@ -776,10 +862,21 @@ void odesolve_nonstiff(
 					objPtr,
 					ynew
 				);
+			} else if ( (choice > 20) && (choice <= 30) ) {
+				gsl_ex_adapt(
+					choice - 20,
+					ystart,
+					0.,
+					delta_t,
+					eps,
+					nmax,
+					objPtr,
+					ynew
+				);
 			} else {
 				stringstream errmsg;
 				errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
-					"{1,2,3,4,5} and one of {11,12} for implementations by 'GNU Scientific Library' (GSL).";
+					"{1-5} and one of {11-15,21-25} for implementations by 'GNU Scientific Library' (GSL).";
 				except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 				throw(e);
 			}
