@@ -403,7 +403,8 @@ void RKCK(
 // Simple explicit Euler integration of state variable(s).
 //
 // ATTENTION: Method is not very accurate, nor stable. You should use this method
-// only for very(!) simple ODEs.
+// only for illustrative purposes!
+// <tobias.pilz@uni-potsdam.de>, NOV 2015
 ////////////////////////////////////////////////////////////////////////////////
 void euler_ex(
 	const vector<double> &ystart,
@@ -431,6 +432,8 @@ void euler_ex(
 // Classical, often used method. However, this version contains no error control
 // nor adaptive step size control. It should only be used for simle problems or
 // experimentation.
+// ATTENTION: Values slightly different from GSL version.
+// <tobias.pilz@uni-potsdam.de>, NOV 2015
 ////////////////////////////////////////////////////////////////////////////////
 void rk4(
 	const vector<double> &y,
@@ -480,7 +483,8 @@ void rk4(
 // Adapted from Press et al. (2002), v. 2.11, eq. 16.1.2
 //
 // ATTENTION: Method is not very accurate, no accuracy check included. Use for
-// simple problems only!
+// simple problems or illustration only!
+// <tobias.pilz@uni-potsdam.de>, NOV 2015
 ////////////////////////////////////////////////////////////////////////////////
 void rk2(
 	const vector<double> &ystart,
@@ -510,6 +514,7 @@ void rk2(
 //
 // ATTENTION: Method can handle simple stiff ODEs but is very inefficient. You should
 // use this method only for simple ODEs. For complex problems it might fail.
+// <tobias.pilz@uni-potsdam.de>, NOV 2015
 ////////////////////////////////////////////////////////////////////////////////
 void euler_im(
 	const vector<double> &ystart,
@@ -568,7 +573,11 @@ void euler_im(
 
 ////////////////////////////////////////////////////////////////////////////////
 // Implementations from external 'GNU Scientific Library' (GSL).
-//
+// See documentation: http://www.gnu.org/software/gsl/manual/html_node/Ordinary-Differential-Equations.html#Ordinary-Differential-Equations
+// ATTENTION: So far only explicit solvers are implemented. More advanced solvers
+// need the Jacobi matrix for which an approximation algorithm still has to be
+// implemented.
+// <tobias.pilz@uni-potsdam.de>, DEC 2015
 ////////////////////////////////////////////////////////////////////////////////
 // define a structure to hold parameters for func()
 struct param_type {
@@ -626,7 +635,7 @@ void gsl_ex(
 	
 	// allocate instance of stepping function
 	switch(choice) {
-		case 1: // Second order Runge-Kutta (midpoint) method
+		case 1: // Second order Runge-Kutta method
 			s = gsl_odeiv2_step_alloc(gsl_odeiv2_step_rk2, ny);
 			break;
 			
@@ -709,7 +718,7 @@ void gsl_ex_adapt(
 	// allocate instance of driver object
 	// NOTE: if relative error eps_rel is set to zero, absolute error eps_abs is exactly equal to eps defined in odesolve_nonstiff(); cf. GSL manual 27.3
 	switch(choice) {
-		case 1: // Second order Runge-Kutta (midpoint) method
+		case 1: // Second order Runge-Kutta method
 			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk2, delta_t, eps, 0.);
 			break;
 			
@@ -797,7 +806,7 @@ void odesolve_nonstiff(
 	const int choice
 ) {
 	switch(choice) {
-		case 1: // Simple explicit Euler integration
+		case 1: // Simple explicit Euler integration (should only be used for illustrative purposes!)
 			euler_ex(
 				ystart,
 				delta_t,
