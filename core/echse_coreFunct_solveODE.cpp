@@ -574,9 +574,6 @@ void euler_im(
 ////////////////////////////////////////////////////////////////////////////////
 // Implementations from external 'GNU Scientific Library' (GSL).
 // See documentation: http://www.gnu.org/software/gsl/manual/html_node/Ordinary-Differential-Equations.html#Ordinary-Differential-Equations
-// ATTENTION: So far only explicit solvers are implemented. More advanced solvers
-// need the Jacobi matrix for which an approximation algorithm still has to be
-// implemented.
 // <tobias.pilz@uni-potsdam.de>, DEC 2015
 ////////////////////////////////////////////////////////////////////////////////
 // define a structure to hold parameters for func()
@@ -584,6 +581,8 @@ struct param_type {
 	abstractObject* objPtr; 
 	const unsigned int delta_t;
 	unsigned int ny;
+	unsigned int jac_count;
+	unsigned int fun_count;
 };
 
 // function that is iteratively called to calculate deviations during numerical integration (has an interface pre-defined by GSL; calls derivsScal())
@@ -605,7 +604,63 @@ int func(
 	
 	// set output (convert vector to array)
 	for (unsigned int i=0; i<pars->ny; i++) f[i] = dudt[i];
+	
+	pars->fun_count ++;
+	
+	return GSL_SUCCESS;
+}
 
+// function that approximates the jacobi matrix by finite difference
+int jac(
+	double t,
+	const double y[],
+	double *dfdy, 
+  double dfdt[],
+	void *params
+) {
+	// get parameters
+	struct param_type *pars = (param_type*)params;
+	
+	// convert types of arguments to those needed by derivsScal(); i.e. conversions from array pointer to vector
+	vector<double> u(y, y+pars->ny);
+	vector<double> u1(y, y+pars->ny);
+	vector<double> ref_dudt(pars->ny);
+	vector<double> dudt(pars->ny);
+	
+	// calculate reference model rate of change for original u
+	pars->objPtr->derivsScal(t, u, ref_dudt, pars->delta_t);
+	
+	// initialise jacobi matrix
+	gsl_matrix_view dfdy_mat = gsl_matrix_view_array (dfdy, pars->ny, pars->ny);
+  gsl_matrix * m = &dfdy_mat.matrix; 
+	
+	// loop over state variables
+	for (unsigned int i=0; i<pars->ny; i++) {
+		
+		// perturb value of i-th state variable by sqrt of machine precision (constant defined by GSL)
+		double du = GSL_DBL_EPSILON * fabs(u[i]);
+		if(du < GSL_DBL_EPSILON)
+			du = GSL_DBL_EPSILON;
+		u1[i] = u[i] + du;
+		
+		// evaluate function with i-th state variable perturbed
+		pars->objPtr->derivsScal(t, u1, dudt, pars->delta_t);
+		
+		// approximate partial derivatives by finite difference, i.e. impact of the i-th state var on rate of change of all state vars
+		for (unsigned int j=0; j<pars->ny; j++) {
+			double g1 = dudt[j];
+			double g0 = ref_dudt[j];
+			gsl_matrix_set (m, j, i, (g1 - g0) / du);
+		}
+		
+		// restore value of i-th state variable
+		u1[i] = u[i];
+	}
+	
+	for (unsigned int i=0; i<pars->ny; i++) dfdt[i] = ref_dudt[i];
+	
+	pars->jac_count ++;
+	
 	return GSL_SUCCESS;
 }
 
@@ -628,7 +683,7 @@ void gsl_ex(
 	for (i=0; i<ystart.size(); i++) y[i] = ystart[i];
 
 	// create structure to store parameters of ode system
-	struct param_type pars = {objPtr, delta_t, ny};
+	struct param_type pars = {objPtr, delta_t, ny, 0, 0};
 	
 	// define ODE system as GSL specific data type
 	gsl_odeiv2_system sys = {func, NULL, ny, &pars};
@@ -658,7 +713,7 @@ void gsl_ex(
 		default: 
 			stringstream errmsg;
 			errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
-				"{1-5} and one of {11-15,21-25} for implementations by 'GNU Scientific Library' (GSL).";
+				"{1-5} and one of {11-15,21-25,31-36} for implementations by 'GNU Scientific Library' (GSL).";
 			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 			throw(e);
 	}
@@ -710,7 +765,7 @@ void gsl_ex_adapt(
 	for (i=0; i<ystart.size(); i++) y[i] = ystart[i];
 
 	// create structure to store parameters of ode system
-	struct param_type pars = {objPtr, delta_t, ny};
+	struct param_type pars = {objPtr, delta_t, ny, 0, 0};
 	
 	// define ODE system as GSL specific data type
 	gsl_odeiv2_system sys = {func, NULL, ny, &pars};
@@ -741,7 +796,7 @@ void gsl_ex_adapt(
 		default: 
 			stringstream errmsg;
 			errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
-				"{1-5} and one of {11-15,21-25} for implementations by 'GNU Scientific Library' (GSL).";
+				"{1-5} and one of {11-15,21-25,31-36} for implementations by 'GNU Scientific Library' (GSL).";
 			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 			throw(e);
 	}
@@ -769,6 +824,101 @@ void gsl_ex_adapt(
 			"Return value: " << status;
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 	}
+		
+	// assign output value
+	ynew.assign(y, y+ny);
+	
+	// delete array pointers
+ 	delete[] y;
+ 	y = NULL;
+}
+
+// Apply implicit GSL solver requiring Jacobian
+void gsl_imp_adapt(
+	const int choice,
+	const vector<double> &ystart,
+	double x1,
+	const unsigned int delta_t,
+	const double eps,
+	const unsigned int nmax,
+	abstractObject* objPtr,
+	vector<double> &ynew
+) {
+	// local data (GSL uses arrays instead of vectors)
+	unsigned int i;
+	const unsigned int ny = ystart.size();
+	int status;
+	gsl_odeiv2_driver * d;
+	double *y = new double [ny];
+	for (i=0; i<ystart.size(); i++) y[i] = ystart[i];
+
+	// create structure to store parameters of ode system
+	struct param_type pars = {objPtr, delta_t, ny, 0, 0};
+	
+	// define ODE system as GSL specific data type
+	gsl_odeiv2_system sys = {func, jac, ny, &pars};
+	
+	// allocate instance of driver object
+	// NOTE: if relative error eps_rel is set to zero, absolute error eps_abs is exactly equal to eps defined in odesolve_nonstiff(); cf. GSL manual 27.3
+	switch(choice) {		
+		case 1: // implicit euler
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk1imp, delta_t, eps, 0.);
+			break;
+		
+		case 2: // implicit second order Runge-Kutta
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk2imp, delta_t, eps, 0.);
+			break;
+			
+		case 3: // implicit fourth order Runge-Kutta
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk4imp, delta_t, eps, 0.);
+			break;
+			
+		case 4: // implicit Bulirsch-Stoer method of Bader and Deuflhard (well suitable for stiff ODE)
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_bsimp, delta_t, eps, 0.);
+			break;
+			
+		case 5: // linear multistep Adams method in Nordsieck form (explicit Adams-Bashforth (predictor) and implicit Adams-Moulton (corrector) methods)
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_msadams, delta_t, eps, 0.);
+			break;
+			
+		case 6: // linear multistep backward differentiation formula (BDF) method in Nordsieck form (explicit BDF formula as predictor and implicit BDF formula as corrector; generally suitable for stiff problems)
+			d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_msbdf, delta_t, eps, 0.);
+			break;
+			
+		default: 
+			stringstream errmsg;
+			errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
+				"{1-5} and one of {11-15,21-25,31-36} for implementations by 'GNU Scientific Library' (GSL).";
+			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+			throw(e);
+	}
+	
+	// set maximum no. of sub-steps
+	status = gsl_odeiv2_driver_set_nmax(d, nmax);
+	
+	if (status != GSL_SUCCESS) {
+    stringstream errmsg;
+    errmsg << "An error occurred during definition of maximum number of sub-steps for numerical integration using GSL! " <<
+			"Return value: " << status;
+    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+	}
+	
+	// apply driver function (evolves state y from x1 to delta_t with adaptive sub-stepping)
+	status = gsl_odeiv2_driver_apply (d, &x1, delta_t, y);
+	
+	// free allocated storage for driver object
+	gsl_odeiv2_driver_free(d);
+	
+	// check status
+	if (status != GSL_SUCCESS) {
+    stringstream errmsg;
+    errmsg << "An error occurred during numerical integration using GSL library! " <<
+			"Return value: " << status;
+    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+	}
+	
+// 	cout << "No. of Jacobian evaluations: " << pars.jac_count << endl;
+// 	cout << "No. of function evaluations: " << pars.fun_count << endl;
 		
 	// assign output value
 	ynew.assign(y, y+ny);
@@ -882,10 +1032,21 @@ void odesolve_nonstiff(
 					objPtr,
 					ynew
 				);
+			} else if ( (choice > 30) && (choice <= 40) ) {
+				gsl_imp_adapt(
+					choice - 30,
+					ystart,
+					0.,
+					delta_t,
+					eps,
+					nmax,
+					objPtr,
+					ynew
+				);
 			} else {
 				stringstream errmsg;
 				errmsg << "Invalid choice of numerical integration method! Currently supported is one of " <<
-					"{1-5} and one of {11-15,21-25} for implementations by 'GNU Scientific Library' (GSL).";
+					"{1-5} and one of {11-15,21-25,31-36} for implementations by 'GNU Scientific Library' (GSL).";
 				except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
 				throw(e);
 			}

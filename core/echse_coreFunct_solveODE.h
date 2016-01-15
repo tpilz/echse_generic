@@ -11,6 +11,8 @@
 // gsl (GNU scientific library) with ode solvers and error handling
 #include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_errno.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_machine.h>
 
 using namespace std;
 
