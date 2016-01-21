@@ -727,9 +727,11 @@ void gsl_ex(
 	// check status
 	if (status != GSL_SUCCESS) {
     stringstream errmsg;
-    errmsg << "An error occurred during numerical integration using GSL library! " <<
-			"Return value: " << status;
+    errmsg << "An unexpected error occurred during numerical integration using GSL library! " <<
+			"Return value: " << status << ". " <<
+			"Have a look at the GSL source code file 'err/gsl_errno.h' for the meaning!";
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+		throw(e);
 	}
 		
 	// assign output value
@@ -807,24 +809,36 @@ void gsl_ex_adapt(
 	if (status != GSL_SUCCESS) {
     stringstream errmsg;
     errmsg << "An error occurred during definition of maximum number of sub-steps for numerical integration using GSL! " <<
-			"Return value: " << status;
+			"Return value: " << status << ". " <<
+			"Have a look at the GSL source code file 'err/gsl_errno.h' for the meaning!";
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+		throw(e);
 	}
 	
 	// apply driver function (evolves state y from x1 to delta_t with adaptive sub-stepping)
 	status = gsl_odeiv2_driver_apply (d, &x1, delta_t, y);
 	
+	// check status
+	if (status != GSL_SUCCESS) {
+		if (status == GSL_EMAXITER) {
+			stringstream errmsg;
+			errmsg << "An error occurred during numerical integration using GSL library: " <<
+				"Maximum number of sub-steps exeeded! " <<
+				"Try to increase the number of allowed sub-steps or use a different solver.";
+			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+			throw(e);
+		}
+    stringstream errmsg;
+    errmsg << "An unexprected error occurred during numerical integration using GSL library! " <<
+			"Return value: " << status << ". " <<
+			"Have a look at the GSL source code file 'err/gsl_errno.h' for the meaning!";
+    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+		throw(e);
+	}
+	
 	// free allocated storage for driver object
 	gsl_odeiv2_driver_free(d);
 	
-	// check status
-	if (status != GSL_SUCCESS) {
-    stringstream errmsg;
-    errmsg << "An error occurred during numerical integration using GSL library! " <<
-			"Return value: " << status;
-    except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
-	}
-		
 	// assign output value
 	ynew.assign(y, y+ny);
 	
@@ -899,26 +913,35 @@ void gsl_imp_adapt(
 	if (status != GSL_SUCCESS) {
     stringstream errmsg;
     errmsg << "An error occurred during definition of maximum number of sub-steps for numerical integration using GSL! " <<
-			"Return value: " << status;
+			"Return value: " << status << ". " <<
+			"Have a look at the GSL source code file 'err/gsl_errno.h' for the meaning!";
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+		throw(e);
 	}
 	
 	// apply driver function (evolves state y from x1 to delta_t with adaptive sub-stepping)
 	status = gsl_odeiv2_driver_apply (d, &x1, delta_t, y);
 	
-	// free allocated storage for driver object
-	gsl_odeiv2_driver_free(d);
-	
 	// check status
 	if (status != GSL_SUCCESS) {
+		if (status == GSL_EMAXITER) {
+			stringstream errmsg;
+			errmsg << "An error occurred during numerical integration using GSL library: " <<
+				"Maximum number of sub-steps exeeded! " <<
+				"Try to increase the number of allowed sub-steps or use a different solver.";
+			except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+			throw(e);
+		}
     stringstream errmsg;
-    errmsg << "An error occurred during numerical integration using GSL library! " <<
-			"Return value: " << status;
+    errmsg << "An unexpected error occurred during numerical integration using GSL library! " <<
+			"Return value: " << status << ". " <<
+			"Have a look at the GSL source code file 'err/gsl_errno.h' for the meaning!";
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
+		throw(e);
 	}
 	
-// 	cout << "No. of Jacobian evaluations: " << pars.jac_count << endl;
-// 	cout << "No. of function evaluations: " << pars.fun_count << endl;
+	// free allocated storage for driver object
+	gsl_odeiv2_driver_free(d);
 		
 	// assign output value
 	ynew.assign(y, y+ny);
