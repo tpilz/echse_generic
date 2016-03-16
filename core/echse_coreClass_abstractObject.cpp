@@ -950,8 +950,8 @@ void abstractObject::init_statesVect(const table &tab) {
         // Save values and clear temporarys
         statesVect.add(tmp);        
         tmp.clear();
-        tab_subset.clear();
       } // End of loop over state variables
+      tab_subset.clear();
     }
   } catch (except) {
     stringstream errmsg;
