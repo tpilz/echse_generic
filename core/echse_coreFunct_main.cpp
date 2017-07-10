@@ -605,10 +605,10 @@ int main (const int argc, const char* argv[]) {
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
     e.print(file_err,format_err);
     return(1);
-  } catch (exception e) {
+  } catch (exception x) {
     lg.add(silent, "Stopped due to standard/system exception.");
     stringstream errmsg;
-    errmsg << "Stopped due to standard/system exception (" << e.what() <<
+    errmsg << "Stopped due to standard/system exception (" << x.what() <<
       "). Traceback not available. Please report this error.";
     except e(__PRETTY_FUNCTION__,errmsg,__FILE__,__LINE__);
     e.print(file_err,format_err);
