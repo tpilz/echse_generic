@@ -86,7 +86,7 @@ fi
 compi="g++"
 
 # Compiler flags
-flags="-lgsl -lgslcblas -ansi -iquote$cpplib -iquote$coreDir -iquote$genDir -iquote$userDirCls -iquote$userDirPrc -L$cpplib -Wall -Wextra -lstdc++ -std=c++0x -pedantic -ftrapping-math -fbounds-check -O3 -fopenmp"
+flags="-ansi -iquote$cpplib -iquote$coreDir -iquote$genDir -iquote$userDirCls -iquote$userDirPrc -L$cpplib -Wall -Wextra -lstdc++ -std=c++0x -pedantic -ftrapping-math -fbounds-check -O3 -fopenmp"
 
 # List of source files of the generic model core
 pattern="$coreDir/*.cpp"
@@ -94,7 +94,7 @@ coreSources=$(ls $pattern)
 
 # Compile command
 echo "Compiling $engine. This may take some time..."
-$compi $flags -o $engine $coreSources -lcpplib -lm
+$compi $flags -o $engine $coreSources -lcpplib -lm -lgsl -lgslcblas
 if [ $? -ne 0 ]
 then
   echo "Error: Compilation/build failed. See error messages above."
